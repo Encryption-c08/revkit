@@ -80,33 +80,11 @@ From ring-0 it can:
 | thing | notes |
 |-------|-------|
 | Windows 10 / 11 x64 | tested on Win11 22H2+ |
-| Administrator | required — driver loading needs SeLoadDriverPrivilege |
-| Test signing mode | OR secure boot off, OR kernel debug mode |
+| Administrator | required — driver loading needs admin privileges |
 | Microsoft Edge / WebView2 | already on most machines — if not, install the [WebView2 runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) |
-| [kdmapper.exe](https://github.com/TheCruZ/kdmapper/releases) | place next to `revkit.exe` — used to load the unsigned driver |
+| [kdmapper.exe](https://github.com/TheCruZ/kdmapper/releases) | place next to `revkit.exe` |
 
-### enable test signing
-
-Run as admin, then reboot:
-
-```bat
-bcdedit /set testsigning on
-```
-
-To undo later:
-
-```bat
-bcdedit /set testsigning off
-```
-
-If Secure Boot is on you need to turn it off in BIOS first, or use kernel debug mode instead.
-
-### kernel debug mode (alternative to test signing)
-
-```bat
-bcdedit /debug on
-bcdedit /dbgsettings serial debugport:1 baudrate:115200
-```
+**No test signing required.** kdmapper loads the driver by exploiting a signed vulnerable Intel driver, bypassing Windows driver signature enforcement entirely. No bcdedit, no reboots, no BIOS changes.
 
 ---
 
