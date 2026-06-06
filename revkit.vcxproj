@@ -74,7 +74,6 @@
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y /I "$(SolutionDir)vendor\webview2\build\native\x64\WebView2Loader.dll" "$(OutDir)"
-xcopy /Y /I "$(SolutionDir)src\ui\app.html" "$(OutDir)"
 xcopy /Y /I "$(SolutionDir)driver\bin\Release\revkit-driver.sys" "$(OutDir)"
 powershell -NoProfile -Command "$tools='$(SolutionDir)tools'; $out='$(OutDir)'; $kd=$tools+'\kdmapper.exe'; if(!(Test-Path $kd)){try{$rel=Invoke-RestMethod 'https://api.github.com/repos/TheCruZ/kdmapper/releases/latest';$url=($rel.assets|Where-Object{$_.name -eq 'kdmapper.exe'}|Select-Object -First 1).browser_download_url;if($url){Invoke-WebRequest $url -OutFile $kd -UseBasicParsing;Write-Host 'Downloaded kdmapper.exe'}else{Write-Host 'kdmapper.exe not in release assets'}}catch{Write-Host 'Download failed:'+$_}};if(Test-Path $kd){Copy-Item $kd $out -Force;Write-Host 'kdmapper.exe copied'}else{Write-Host 'WARNING: kdmapper.exe missing - place it in tools\'}"
 </Command>
@@ -100,6 +99,9 @@ powershell -NoProfile -Command "$tools='$(SolutionDir)tools'; $out='$(OutDir)'; 
       <UACExecutionLevel>asInvoker</UACExecutionLevel>
     </Link>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\ui\app.rc" />
+  </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\core\memory.cpp" />

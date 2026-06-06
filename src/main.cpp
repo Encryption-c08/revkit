@@ -637,11 +637,25 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR lpCmdLine, int)
                             GetClientRect(g_hwnd, &rc);
                             ctrl->put_Bounds(rc);
 
-                            std::string ui_path = exe_dir() + "app.html";
-                            std::string url = "file:///";
-                            for (char c : ui_path) url += (c == '\\') ? '/' : c;
-                            std::wstring wurl(url.begin(), url.end());
-                            wv->Navigate(wurl.c_str());
+                            HRSRC   hres  = FindResourceA(nullptr, "APP_HTML", "RCDATA");
+                            HGLOBAL hgl   = hres ? LoadResource(nullptr, hres) : nullptr;
+                            DWORD   rsize = hres ? SizeofResource(nullptr, hres) : 0;
+                            void*   rdata = hgl  ? LockResource(hgl) : nullptr;
+
+                            if (rdata && rsize)
+                            {
+                                std::wstring html(static_cast<char*>(rdata),
+                                                  static_cast<char*>(rdata) + rsize);
+                                wv->NavigateToString(html.c_str());
+                            }
+                            else
+                            {
+                                std::string ui_path = exe_dir() + "app.html";
+                                std::string url = "file:///";
+                                for (char c : ui_path) url += (c == '\\') ? '/' : c;
+                                std::wstring wurl(url.begin(), url.end());
+                                wv->Navigate(wurl.c_str());
+                            }
 
                             wv->add_NavigationCompleted(
                                 Callback<ICoreWebView2NavigationCompletedEventHandler>(
