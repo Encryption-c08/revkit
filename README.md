@@ -14,7 +14,7 @@
 
 ---
 
-revkit is a Windows kernel-mode memory tool with a built-in [Model Context Protocol](https://modelcontextprotocol.io) server. It lets AI agents (Claude, GPT-4, Cursor, Windsurf, Codex, etc.) read and write process memory, disassemble code, parse PE headers, scan for patterns and strings, all from ring-0, bypassing the usual usermode restrictions.
+revkit is a Windows kernel-mode memory tool with a built-in [Model Context Protocol](https://modelcontextprotocol.io) server. It lets AI agents read and write process memory, disassemble code, parse PE headers, scan for patterns and strings, all from ring-0, bypassing the usual usermode restrictions.
 
 Ships with a web-based UI built on WebView2.
 
@@ -46,7 +46,7 @@ From ring-0 it can:
 - **Malware analysis** - inspect a running malware sample without touching it from usermode. Read its heap, stack, loaded modules.
 - **DRM research** - read memory regions of protected processes that deny all usermode handles.
 - **Fuzzing / instrumentation** - inject values into a running process mid-execution to observe behaviour without modifying the binary on disk.
-- **AI-assisted RE** - the whole point of the MCP layer. Let Claude or any other agent drive the analysis. Ask it to find a function, follow a pointer chain, decode a struct, it calls the tools and gives you results in plain English.
+- **AI-assisted RE** - the whole point of the MCP layer. Let any agent drive the analysis. Ask it to find a function, follow a pointer chain, decode a struct, it calls the tools and gives you results in plain English.
 - **Debugging without a debugger** - read process state from ring-0 when a debugger would be detected or is unavailable.
 
 ---
@@ -94,7 +94,7 @@ All files must be in the same folder. Run `revkit.exe` as Administrator. The dri
 
 ### MCP config
 
-Paste this into your AI agent's config file. For Claude Code it's `~/.claude.json`, for Cursor/Windsurf it's in their MCP settings.
+Paste this into your AI agent's MCP config file (Cursor, Windsurf, or any MCP-compatible client).
 
 ```json
 {

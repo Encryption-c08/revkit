@@ -42,7 +42,7 @@ Do not close the GUI window while agents are using the server.
 
 Add revkit to your agent's MCP config. The server speaks standard MCP over HTTP.
 
-### Claude Code (`~/.claude/settings.json` or project `.claude/settings.json`)
+### Cursor / Windsurf / any MCP client
 
 ```json
 {

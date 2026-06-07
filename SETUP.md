@@ -68,9 +68,7 @@ All four files must be in the same directory. Do not move them individually.
 
 ## MCP Configuration
 
-### Claude Code
-
-Global config at `%USERPROFILE%\.claude\settings.json`, or per-project at `.claude\settings.json`:
+### MCP Client config
 
 ```json
 {
