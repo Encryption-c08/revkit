@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B2C3D4E5-F6A7-8901-BCDE-F12345678901}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>revkit</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)obj\$(Configuration)\$(ProjectName)\</IntDir>
+    <TargetName>revkit</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)obj\$(Configuration)\$(ProjectName)\</IntDir>
+    <TargetName>revkit-d</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;NOMINMAX;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(SolutionDir)vendor;$(SolutionDir)vendor\webview2\build\native\include;$(SolutionDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)vendor\webview2\build\native\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ntdll.lib;Advapi32.lib;Psapi.lib;Shell32.lib;Shlwapi.lib;Ws2_32.lib;gdi32.lib;dwmapi.lib;user32.lib;ole32.lib;WebView2Loader.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <UACExecutionLevel>asInvoker</UACExecutionLevel>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /I "$(SolutionDir)vendor\webview2\build\native\x64\WebView2Loader.dll" "$(OutDir)"
+xcopy /Y /I "$(SolutionDir)driver\bin\Release\revkit-driver.sys" "$(OutDir)"
+powershell -NoProfile -Command "$tools='$(SolutionDir)tools'; $out='$(OutDir)'; $kd=$tools+'\kdmapper.exe'; if(!(Test-Path $kd)){try{$rel=Invoke-RestMethod 'https://api.github.com/repos/TheCruZ/kdmapper/releases/latest';$url=($rel.assets|Where-Object{$_.name -eq 'kdmapper.exe'}|Select-Object -First 1).browser_download_url;if($url){Invoke-WebRequest $url -OutFile $kd -UseBasicParsing;Write-Host 'Downloaded kdmapper.exe'}else{Write-Host 'kdmapper.exe not in release assets'}}catch{Write-Host 'Download failed:'+$_}};if(Test-Path $kd){Copy-Item $kd $out -Force;Write-Host 'kdmapper.exe copied'}else{Write-Host 'WARNING: kdmapper.exe missing - place it in tools\'}"
+</Command>
+      <Message>Copying runtime files to output</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;NOMINMAX;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(SolutionDir)vendor;$(SolutionDir)vendor\webview2\build\native\include;$(SolutionDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)vendor\webview2\build\native\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ntdll.lib;Advapi32.lib;Psapi.lib;Shell32.lib;Shlwapi.lib;Ws2_32.lib;gdi32.lib;dwmapi.lib;user32.lib;ole32.lib;WebView2Loader.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <UACExecutionLevel>asInvoker</UACExecutionLevel>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\ui\app.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\core\memory.cpp" />
+    <ClCompile Include="src\mcp\server.cpp" />
+    <ClCompile Include="src\driver\kdmapper_dll.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\driver\ioctl.hpp" />
+    <ClInclude Include="src\driver\service.hpp" />
+    <ClInclude Include="src\driver\backend.hpp" />
+    <ClInclude Include="src\driver\kdmapper_dll.hpp" />
+    <ClInclude Include="src\util\encoding.hpp" />
+    <ClInclude Include="src\util\privilege.hpp" />
+    <ClInclude Include="src\util\hvci.hpp" />
+    <ClInclude Include="src\util\inject.hpp" />
+    <ClInclude Include="src\core\process.hpp" />
+    <ClInclude Include="src\core\memory.hpp" />
+    <ClInclude Include="src\analysis\pe.hpp" />
+    <ClInclude Include="src\analysis\scanner.hpp" />
+    <ClInclude Include="src\analysis\strings.hpp" />
+    <ClInclude Include="src\analysis\chain.hpp" />
+    <ClInclude Include="src\mcp\protocol.hpp" />
+    <ClInclude Include="src\mcp\server.hpp" />
+    <ClInclude Include="src\mcp\http_server.hpp" />
+    <ClInclude Include="src\mcp\tools\process_tools.hpp" />
+    <ClInclude Include="src\mcp\tools\memory_tools.hpp" />
+    <ClInclude Include="src\mcp\tools\analysis_tools.hpp" />
+    <ClInclude Include="src\analysis\disasm.hpp" />
+    <ClInclude Include="src\mcp\tools\game_tools.hpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>hpp;h</Extensions>
+    </Filter>
+    <Filter Include="Header Files\core">
+      <UniqueIdentifier>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\driver">
+      <UniqueIdentifier>{B2C3D4E5-F6A7-8901-BCDE-F12345678901}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\util">
+      <UniqueIdentifier>{C3D4E5F6-A7B8-9012-CDEF-123456789012}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\analysis">
+      <UniqueIdentifier>{D4E5F6A7-B8C9-0123-DEF0-234567890123}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mcp">
+      <UniqueIdentifier>{E5F6A7B8-C9D0-1234-EF01-345678901234}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mcp\tools">
+      <UniqueIdentifier>{F6A7B8C9-D0E1-2345-F012-456789012345}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\memory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mcp\server.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\driver\kdmapper_dll.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\core\memory.hpp">
+      <Filter>Header Files\core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\process.hpp">
+      <Filter>Header Files\core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\driver\backend.hpp">
+      <Filter>Header Files\driver</Filter>
+    </ClInclude>
+    <ClInclude Include="src\driver\ioctl.hpp">
+      <Filter>Header Files\driver</Filter>
+    </ClInclude>
+    <ClInclude Include="src\driver\service.hpp">
+      <Filter>Header Files\driver</Filter>
+    </ClInclude>
+    <ClInclude Include="src\driver\kdmapper_dll.hpp">
+      <Filter>Header Files\driver</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\encoding.hpp">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\privilege.hpp">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\hvci.hpp">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\inject.hpp">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\analysis\chain.hpp">
+      <Filter>Header Files\analysis</Filter>
+    </ClInclude>
+    <ClInclude Include="src\analysis\disasm.hpp">
+      <Filter>Header Files\analysis</Filter>
+    </ClInclude>
+    <ClInclude Include="src\analysis\pe.hpp">
+      <Filter>Header Files\analysis</Filter>
+    </ClInclude>
+    <ClInclude Include="src\analysis\scanner.hpp">
+      <Filter>Header Files\analysis</Filter>
+    </ClInclude>
+    <ClInclude Include="src\analysis\strings.hpp">
+      <Filter>Header Files\analysis</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mcp\protocol.hpp">
+      <Filter>Header Files\mcp</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mcp\server.hpp">
+      <Filter>Header Files\mcp</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mcp\http_server.hpp">
+      <Filter>Header Files\mcp</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mcp\tools\process_tools.hpp">
+      <Filter>Header Files\mcp\tools</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mcp\tools\memory_tools.hpp">
+      <Filter>Header Files\mcp\tools</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mcp\tools\analysis_tools.hpp">
+      <Filter>Header Files\mcp\tools</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mcp\tools\game_tools.hpp">
+      <Filter>Header Files\mcp\tools</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

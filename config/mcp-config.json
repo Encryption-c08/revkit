@@ -1,0 +1,10 @@
+﻿{
+  "_instructions": "Merge the mcpServers block into %APPDATA%\\Claude\\claude_desktop_config.json",
+  "mcpServers": {
+    "revkit": {
+      "command": "C:\\Users\\token\\Desktop\\Utility\\revkit\\bin\\Release\\revkit.exe",
+      "args": []
+    }
+  }
+}
+

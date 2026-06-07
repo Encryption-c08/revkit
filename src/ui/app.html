@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>revkit</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0a0a10;--panel:#10121b;--card:#161a25;--border:#282e42;
+    --accent:#63b3ed;--green:#48c78e;--red:#fc5c65;--yellow:#ffbe5c;
+    --text:#e2e8f0;--dim:#64748b;--header:#94a3b8;
+    --badge-ok:#0d2e1e;--badge-err:#2d0e10;--badge-warn:#2d1e08;
+    --badge-req:#1a1f2e;--badge-resp:#0e1f30;--badge-info:#1a1f2e;
+  }
+  html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:13px}
+  #app{display:flex;flex-direction:column;height:100vh}
+
+  #header{display:flex;align-items:center;height:42px;background:var(--panel);border-bottom:1px solid var(--border);padding:0 16px;flex-shrink:0;gap:12px}
+  #header .accent-bar{width:3px;height:24px;background:var(--accent);border-radius:2px}
+  #header .logo{color:var(--accent);font-weight:700;font-size:14px;letter-spacing:.05em}
+  #header .sep{color:var(--border);font-size:16px}
+  #header .subtitle{color:var(--dim);font-size:11px}
+  #header .spacer{flex:1}
+  #header .port-badge{background:var(--card);border:1px solid var(--border);color:var(--accent);padding:3px 10px;border-radius:4px;font-size:11px}
+
+  #body{display:flex;flex:1;overflow:hidden}
+
+  #sidebar{width:200px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+  .section-label{padding:12px 14px 6px;color:var(--dim);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+  .status-card{margin:2px 8px;padding:7px 10px;background:var(--card);border-radius:4px;display:flex;align-items:center;gap:8px;border-left:3px solid var(--border)}
+  .status-card.ok{border-left-color:var(--green)}
+  .status-card.err{border-left-color:var(--red)}
+  .status-card.warn{border-left-color:var(--yellow)}
+  .status-card.active{border-left-color:var(--accent)}
+  .status-card .lbl{color:var(--dim);flex:0 0 52px;font-size:12px}
+  .status-card .val{color:var(--text);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .divider{height:1px;background:var(--border);margin:8px 8px}
+  .write-btn{margin:4px 8px;padding:7px 10px;background:var(--card);border:1px solid var(--yellow);border-radius:4px;color:var(--yellow);cursor:pointer;font-family:inherit;font-size:11px;text-align:center;transition:background .15s}
+  .write-btn:hover{background:#2d1e08}
+
+  .chart-wrap{padding:4px 8px 8px}
+  .chart-label{color:var(--dim);font-size:10px;letter-spacing:.08em;margin-bottom:3px}
+  canvas.chart{width:100%;height:28px;display:block}
+
+  #logpanel{display:flex;flex-direction:column;flex:1;overflow:hidden}
+  #log-header{display:grid;grid-template-columns:70px 52px 1fr;padding:6px 12px;color:var(--header);border-bottom:1px solid var(--border);font-size:11px;flex-shrink:0;background:var(--panel)}
+  #log-body{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+  #log-body::-webkit-scrollbar{width:4px}
+  #log-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  .log-row{display:grid;grid-template-columns:70px 52px 1fr;padding:4px 12px;border-bottom:1px solid rgba(40,46,66,.4);cursor:pointer;transition:background .1s;align-items:center}
+  .log-row:hover{background:var(--card)}
+  .log-row.selected{background:rgba(99,179,237,.08);border-left:3px solid var(--accent);padding-left:9px}
+  .log-time{color:var(--dim);font-size:11px;font-family:'Consolas',monospace}
+  .badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;letter-spacing:.04em;font-weight:600}
+  .badge-ok   {background:var(--badge-ok);   color:var(--green)}
+  .badge-err  {background:var(--badge-err);  color:var(--red)}
+  .badge-warn {background:var(--badge-warn); color:var(--yellow)}
+  .badge-req  {background:var(--badge-req);  color:var(--dim)}
+  .badge-resp {background:var(--badge-resp); color:var(--accent)}
+  .badge-info {background:var(--badge-info); color:var(--header)}
+  .log-msg{color:var(--text);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:8px}
+
+  #detail{background:var(--card);border-top:1px solid var(--border);overflow-y:auto;max-height:160px;display:none;padding:10px 14px;font-size:12px;font-family:'Consolas',monospace;color:var(--text);white-space:pre-wrap;word-break:break-all;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+  #detail.open{display:block}
+
+  #rpm-warning{display:none;background:#2d0e10;border-top:2px solid var(--red);padding:6px 14px;font-size:11px;color:var(--red);flex-shrink:0;font-family:'Consolas',monospace}
+  #rpm-warning strong{margin-right:6px}
+  #inputbar{display:flex;align-items:center;height:36px;background:var(--panel);border-top:1px solid var(--border);padding:0 12px;gap:8px;flex-shrink:0}
+  #inputbar .prompt{color:var(--accent);font-weight:700;font-size:13px}
+  #inputbar input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'Consolas',monospace;font-size:13px;caret-color:var(--accent)}
+  #inputbar input::placeholder{color:var(--dim)}
+
+  #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
+  #overlay.open{display:flex}
+  #modal{background:var(--panel);border:1px solid var(--accent);border-radius:6px;width:380px;overflow:hidden}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)}
+  .modal-title{color:var(--accent);font-weight:700;font-size:13px}
+  .modal-close{color:var(--red);cursor:pointer;font-size:14px;background:none;border:none;font-family:inherit}
+  .modal-body{padding:14px}
+  .field{margin-bottom:12px}
+  .field label{display:block;color:var(--dim);font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+  .field input,.field select{width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:4px;font-family:inherit;font-size:12px;outline:none}
+  .field input:focus,.field select:focus{border-color:var(--accent)}
+  .field select option{background:var(--card)}
+  .modal-footer{display:flex;gap:8px;padding:0 14px 14px;justify-content:flex-end}
+  .btn{padding:6px 16px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px;border:none}
+  .btn-primary{background:var(--accent);color:#0a0a10;font-weight:700}
+  .btn-secondary{background:var(--card);border:1px solid var(--border);color:var(--text)}
+  .btn-primary:hover{opacity:.85}
+  .btn-secondary:hover{border-color:var(--accent)}
+  .preview{background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:4px 8px;font-size:11px;color:var(--green);min-height:22px;margin-top:4px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div class="accent-bar"></div>
+    <span class="logo">revkit</span>
+    <span class="sep">|</span>
+    <span class="subtitle">kernel memory RE</span>
+    <div class="spacer"></div>
+    <span class="port-badge" id="port-badge">HTTP :13338</span>
+  </div>
+  <div id="body">
+    <div id="sidebar">
+      <div class="section-label">Status</div>
+      <div class="status-card" id="sc-driver"><span class="lbl">driver</span><span class="val" id="sv-driver">-</span></div>
+      <div class="status-card" id="sc-priv"><span class="lbl">priv</span><span class="val" id="sv-priv">-</span></div>
+      <div class="status-card active"><span class="lbl">port</span><span class="val" id="sv-port">13338</span></div>
+      <div class="status-card" id="sc-target"><span class="lbl">target</span><span class="val" id="sv-target">none</span></div>
+      <div class="status-card" id="sc-backend"><span class="lbl">backend</span><span class="val" id="sv-backend">-</span></div>
+      <div style="margin:8px 8px 0">
+        <button class="write-btn" onclick="openWrite()">+ Write Memory</button>
+      </div>
+      <div class="divider" style="margin-top:12px"></div>
+      <div class="section-label">Activity</div>
+      <div class="chart-wrap">
+        <div class="chart-label">READS</div>
+        <canvas class="chart" id="chart-r" width="180" height="28"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-label">WRITES</div>
+        <canvas class="chart" id="chart-w" width="180" height="28"></canvas>
+      </div>
+    </div>
+    <div id="logpanel">
+      <div id="log-header">
+        <span>TIME</span><span>TYPE</span><span style="padding-left:8px">MESSAGE</span>
+      </div>
+      <div id="log-body"></div>
+      <div id="detail"></div>
+    </div>
+  </div>
+  <div id="rpm-warning"><strong>WARNING</strong> kernel driver not loaded - running in usermode fallback (RPM). reads on protected processes will fail. physical writes unavailable. run as administrator to load the driver.</div>
+  <div id="inputbar">
+    <span class="prompt">&gt;</span>
+    <input id="cmd" type="text" placeholder="type /help for commands" autocomplete="off" spellcheck="false">
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="modal">
+    <div class="modal-header">
+      <span class="modal-title">Write Memory</span>
+      <button class="modal-close" onclick="closeWrite()">X</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Address</label><input id="wr-addr" placeholder="0x000000000000" spellcheck="false"></div>
+      <div class="field"><label>Type</label>
+        <select id="wr-type" onchange="updatePreview()">
+          <option value="float">Float (4 bytes)</option>
+          <option value="i32">Int32 (4 bytes)</option>
+          <option value="i64">Int64 (8 bytes)</option>
+          <option value="hex">Hex bytes</option>
+        </select>
+      </div>
+      <div class="field"><label>Value</label><input id="wr-val" placeholder="0" oninput="updatePreview()" spellcheck="false"><div class="preview" id="wr-preview"></div></div>
+      <div class="field"><label>Method</label>
+        <select id="wr-method">
+          <option value="physical">Physical PTE (stealth)</option>
+          <option value="kernel">Kernel copy</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeWrite()">Cancel</button>
+      <button class="btn btn-primary" onclick="commitWrite()">Write</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const logBody  = document.getElementById('log-body');
+const detailEl = document.getElementById('detail');
+const cmdInput = document.getElementById('cmd');
+const MAX_ROWS = 300;
+let selectedRow = null;
+
+function badge(level) {
+  const labels = {ok:'OK',err:'ERR',warn:'WARN',req:'REQ',resp:'RESP',info:'INFO'};
+  const k = labels[level] ? level : 'info';
+  return `<span class="badge badge-${k}">${labels[k]||level}</span>`;
+}
+
+function addLog(e) {
+  const row = document.createElement('div');
+  row.className = 'log-row';
+  row.dataset.detail = e.detail || e.msg || '';
+  row.innerHTML = `<span class="log-time">${e.time}</span><span>${badge(e.level)}</span><span class="log-msg">${esc(e.msg)}</span>`;
+  row.addEventListener('click', () => selectRow(row));
+  logBody.appendChild(row);
+  while (logBody.children.length > MAX_ROWS) logBody.removeChild(logBody.firstChild);
+  if (!selectedRow) logBody.scrollTop = logBody.scrollHeight;
+}
+
+function selectRow(row) {
+  if (selectedRow) selectedRow.classList.remove('selected');
+  if (selectedRow === row) { selectedRow = null; detailEl.classList.remove('open'); detailEl.textContent = ''; return; }
+  selectedRow = row;
+  row.classList.add('selected');
+  const d = row.dataset.detail;
+  if (d) {
+    try { detailEl.textContent = JSON.stringify(JSON.parse(d), null, 2); } catch { detailEl.textContent = d; }
+    detailEl.classList.add('open');
+  } else { detailEl.classList.remove('open'); }
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function setStatus(s) {
+  const setCard = (id, val, cls) => {
+    const v = document.getElementById('sv-' + id); if (v) v.textContent = val;
+    const c = document.getElementById('sc-' + id); if (c && cls !== undefined) c.className = 'status-card ' + cls;
+  };
+  setCard('driver',  s.driver ? 'kernel'  : 'fallback', s.driver ? 'ok'   : 'warn');
+  setCard('priv',    s.priv   ? 'SeDebug' : 'denied',   s.priv   ? 'ok'   : 'err');
+  setCard('target',  s.pid ? 'pid:'+s.pid : 'none',     s.pid    ? 'active': '');
+  const isRpm = !s.driver || s.backend === 'RPM';
+  setCard('backend', isRpm ? 'usermode (RPM)' : (s.backend||'kernel'), isRpm ? 'err' : 'ok');
+  const warn = document.getElementById('rpm-warning');
+  if (warn) warn.style.display = isRpm ? 'block' : 'none';
+  const pv = document.getElementById('sv-port'); if (pv) pv.textContent = s.port;
+  const pb = document.getElementById('port-badge'); if (pb) pb.textContent = 'HTTP :' + s.port;
+}
+
+function drawChart(id, data, color) {
+  const c = document.getElementById(id); if (!c) return;
+  const ctx = c.getContext('2d'), W = c.width, H = c.height;
+  ctx.clearRect(0,0,W,H);
+  if (!data.length) return;
+  const max = Math.max(1,...data), bw = Math.floor(W/data.length);
+  data.forEach((v,i) => {
+    const bh = Math.max(v>0?2:0, Math.round(v/max*(H-2)));
+    ctx.fillStyle = 'rgba(40,46,66,.6)'; ctx.fillRect(i*bw,0,bw-1,H);
+    if (bh>0) { ctx.fillStyle = color; ctx.fillRect(i*bw, H-bh, bw-1, bh); }
+  });
+}
+
+window.chrome.webview.addEventListener('message', ev => {
+  let msg; try { msg = JSON.parse(ev.data); } catch { return; }
+  if (msg.type === 'log')      addLog(msg);
+  if (msg.type === 'status')   setStatus(msg);
+  if (msg.type === 'activity') {
+    drawChart('chart-r', msg.data.map(d=>d[0]), '#63b3ed');
+    drawChart('chart-w', msg.data.map(d=>d[1]), '#ffbe5c');
+  }
+});
+
+cmdInput.addEventListener('keydown', ev => {
+  if (ev.key !== 'Enter') return;
+  const v = cmdInput.value.trim(); cmdInput.value = '';
+  if (v) window.chrome.webview.postMessage(JSON.stringify({type:'cmd',cmd:v}));
+});
+
+function openWrite(addr) {
+  if (addr) document.getElementById('wr-addr').value = addr;
+  document.getElementById('overlay').classList.add('open');
+  updatePreview();
+}
+function closeWrite() { document.getElementById('overlay').classList.remove('open'); }
+
+function updatePreview() {
+  const type = document.getElementById('wr-type').value;
+  const val  = document.getElementById('wr-val').value;
+  const prev = document.getElementById('wr-preview');
+  try {
+    const hex = buf => [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(' ').toUpperCase();
+    if (type==='float') { const b=new ArrayBuffer(4); new DataView(b).setFloat32(0,parseFloat(val),true); prev.textContent=hex(b); }
+    else if (type==='i32') { const b=new ArrayBuffer(4); new DataView(b).setInt32(0,parseInt(val),true); prev.textContent=hex(b); }
+    else if (type==='i64') { const b=new ArrayBuffer(8); new DataView(b).setBigInt64(0,BigInt(val),true); prev.textContent=hex(b); }
+    else prev.textContent = val.trim().toUpperCase() || '-';
+  } catch { prev.textContent = 'invalid'; }
+}
+
+function commitWrite() {
+  const addr=document.getElementById('wr-addr').value.trim();
+  const type=document.getElementById('wr-type').value;
+  const val=document.getElementById('wr-val').value.trim();
+  const method=document.getElementById('wr-method').value;
+  if (!addr||!val) return;
+  window.chrome.webview.postMessage(JSON.stringify({type:'write',addr,dataType:type,val,method}));
+  closeWrite();
+}
+
+window.addEventListener('keydown', ev => { if (ev.key==='Escape') closeWrite(); });
+</script>
+</body>
+</html>

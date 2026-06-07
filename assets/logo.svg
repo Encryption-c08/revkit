@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 110" width="520" height="110">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0d0f1a"/>
+      <stop offset="100%" stop-color="#0a0a10"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#63b3ed" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#63b3ed" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="520" height="110" fill="url(#bg)" rx="10"/>
+  <rect width="520" height="55" fill="url(#glow)" rx="10"/>
+
+  <!-- left accent bar -->
+  <rect x="20" y="22" width="3" height="66" fill="#63b3ed" rx="1.5" opacity="0.9"/>
+
+  <!-- chip icon -->
+  <!-- body -->
+  <rect x="36" y="30" width="40" height="50" fill="none" stroke="#63b3ed" stroke-width="1.8" rx="3"/>
+  <!-- inner cross lines -->
+  <line x1="36" y1="55" x2="76" y2="55" stroke="#63b3ed" stroke-width="0.6" opacity="0.3"/>
+  <line x1="56" y1="30" x2="56" y2="80" stroke="#63b3ed" stroke-width="0.6" opacity="0.3"/>
+  <!-- dot in centre -->
+  <circle cx="56" cy="55" r="3" fill="#63b3ed" opacity="0.7"/>
+
+  <!-- pins top -->
+  <line x1="44" y1="30" x2="44" y2="20" stroke="#63b3ed" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="56" y1="30" x2="56" y2="20" stroke="#63b3ed" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="68" y1="30" x2="68" y2="20" stroke="#63b3ed" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- pin caps top -->
+  <rect x="41" y="17" width="6" height="3" fill="#63b3ed" rx="1"/>
+  <rect x="53" y="17" width="6" height="3" fill="#63b3ed" rx="1"/>
+  <rect x="65" y="17" width="6" height="3" fill="#63b3ed" rx="1"/>
+
+  <!-- pins bottom -->
+  <line x1="44" y1="80" x2="44" y2="90" stroke="#63b3ed" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="56" y1="80" x2="56" y2="90" stroke="#63b3ed" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="68" y1="80" x2="68" y2="90" stroke="#63b3ed" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- pin caps bottom -->
+  <rect x="41" y="90" width="6" height="3" fill="#63b3ed" rx="1"/>
+  <rect x="53" y="90" width="6" height="3" fill="#63b3ed" rx="1"/>
+  <rect x="65" y="90" width="6" height="3" fill="#63b3ed" rx="1"/>
+
+  <!-- pins left -->
+  <line x1="36" y1="42" x2="26" y2="42" stroke="#63b3ed" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="36" y1="55" x2="26" y2="55" stroke="#63b3ed" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="36" y1="68" x2="26" y2="68" stroke="#63b3ed" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- pins right -->
+  <line x1="76" y1="42" x2="86" y2="42" stroke="#63b3ed" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="76" y1="55" x2="86" y2="55" stroke="#63b3ed" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="76" y1="68" x2="86" y2="68" stroke="#63b3ed" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- wordmark -->
+  <text x="104" y="67" font-family="Consolas,Cascadia Code,monospace" font-size="44" font-weight="700" fill="#e2e8f0" letter-spacing="-1">rev</text>
+  <text x="210" y="67" font-family="Consolas,Cascadia Code,monospace" font-size="44" font-weight="700" fill="#63b3ed" letter-spacing="-1">kit</text>
+
+  <!-- tagline -->
+  <text x="106" y="86" font-family="Consolas,Cascadia Code,monospace" font-size="11" fill="#64748b" letter-spacing="1">kernel memory RE tool</text>
+
+  <!-- subtle circuit lines (decorative) -->
+  <line x1="340" y1="30" x2="380" y2="30" stroke="#1e2a3a" stroke-width="1"/>
+  <line x1="380" y1="30" x2="380" y2="50" stroke="#1e2a3a" stroke-width="1"/>
+  <line x1="380" y1="50" x2="420" y2="50" stroke="#1e2a3a" stroke-width="1"/>
+  <circle cx="380" cy="30" r="2" fill="#1e2a3a"/>
+  <circle cx="380" cy="50" r="2" fill="#1e2a3a"/>
+
+  <line x1="400" y1="65" x2="440" y2="65" stroke="#1e2a3a" stroke-width="1"/>
+  <line x1="440" y1="65" x2="440" y2="80" stroke="#1e2a3a" stroke-width="1"/>
+  <line x1="440" y1="80" x2="500" y2="80" stroke="#1e2a3a" stroke-width="1"/>
+  <circle cx="440" cy="65" r="2" fill="#1e2a3a"/>
+  <circle cx="440" cy="80" r="2" fill="#1e2a3a"/>
+
+  <line x1="460" y1="25" x2="500" y2="25" stroke="#1e2a3a" stroke-width="1"/>
+  <circle cx="460" cy="25" r="2" fill="#1e2a3a"/>
+</svg>

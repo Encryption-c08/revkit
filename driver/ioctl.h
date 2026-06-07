@@ -1,0 +1,33 @@
+#pragma once
+#include <ntdef.h>
+
+#define CR_DEVICE_TYPE   FILE_DEVICE_UNKNOWN
+
+#define CR_IOCTL_ATTACH         CTL_CODE(CR_DEVICE_TYPE, 0xA11, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define CR_IOCTL_DETACH         CTL_CODE(CR_DEVICE_TYPE, 0xA12, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define CR_IOCTL_READ           CTL_CODE(CR_DEVICE_TYPE, 0xA13, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define CR_IOCTL_WRITE          CTL_CODE(CR_DEVICE_TYPE, 0xA14, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define CR_IOCTL_QUERY          CTL_CODE(CR_DEVICE_TYPE, 0xA15, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define CR_IOCTL_UNLOAD         CTL_CODE(CR_DEVICE_TYPE, 0xA16, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define CR_IOCTL_WRITE_PHYSICAL CTL_CODE(CR_DEVICE_TYPE, 0xA1D, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define CR_IOCTL_KERNEL_READ    CTL_CODE(CR_DEVICE_TYPE, 0xA1E, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+#pragma pack(push, 1)
+
+typedef struct _CR_ATTACH_IN      { ULONG pid;                      } CR_ATTACH_IN;
+typedef struct _CR_READ_IN        { ULONG64 address; ULONG64 size;  } CR_READ_IN;
+typedef struct _CR_WRITE_IN       { ULONG64 address; ULONG64 size;  } CR_WRITE_IN;
+typedef struct _CR_QUERY_IN       { ULONG64 address;                } CR_QUERY_IN;
+typedef struct _CR_WRITE_PHYS_IN  { ULONG64 address; ULONG64 size;  } CR_WRITE_PHYS_IN;
+typedef struct _CR_KERNEL_READ_IN { ULONG64 address; ULONG64 size;  } CR_KERNEL_READ_IN;
+
+typedef struct _CR_QUERY_OUT
+{
+    ULONG64 base;
+    ULONG64 size;
+    ULONG   protect;
+    ULONG   type;
+    ULONG   state;
+} CR_QUERY_OUT;
+
+#pragma pack(pop)
