@@ -4,6 +4,7 @@
 
 PDEVICE_OBJECT g_device = NULL;
 PEPROCESS      g_target = NULL;
+ULONG          g_target_pid = 0;
 
 static WCHAR g_dev_name[32] = {0};
 static WCHAR g_dev_link[48] = {0};
@@ -128,6 +129,7 @@ static NTSTATUS DeviceOffline(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 VOID DriverSelfUnload(VOID)
 {
     UNICODE_STRING lnk;
+    PsSetCreateProcessNotifyRoutine(ProcessNotifyRoutine, TRUE);
     RtlInitUnicodeString(&lnk, g_dev_link);
     IoDeleteSymbolicLink(&lnk);
     if (g_target) { ObDereferenceObject(g_target); g_target = NULL; }
@@ -139,8 +141,21 @@ VOID DriverSelfUnload(VOID)
     }
 }
 
+static VOID ProcessNotifyRoutine(HANDLE ParentId, HANDLE ProcessId, BOOLEAN Create)
+{
+    UNREFERENCED_PARAMETER(ParentId);
+    if (Create)
+        return;
+    if (ProcessId == (HANDLE)(ULONG_PTR)g_target_pid)
+    {
+        if (g_target) { ObDereferenceObject(g_target); g_target = NULL; }
+        g_target_pid = 0;
+    }
+}
+
 static VOID Cleanup(VOID)
 {
+    PsSetCreateProcessNotifyRoutine(ProcessNotifyRoutine, TRUE);
     UNICODE_STRING lnk;
     RtlInitUnicodeString(&lnk, g_dev_link);
     IoDeleteSymbolicLink(&lnk);
@@ -235,6 +250,8 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
 
     g_device->Flags |= DO_BUFFERED_IO;
     g_device->Flags &= ~DO_DEVICE_INITIALIZING;
+
+    PsSetCreateProcessNotifyRoutine(ProcessNotifyRoutine, FALSE);
 
     status = IoCreateSymbolicLink(&device_link, &device_name);
     if (!NT_SUCCESS(status))

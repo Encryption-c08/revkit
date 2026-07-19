@@ -3,6 +3,7 @@
 #include "ioctl.h"
 
 extern PEPROCESS g_target;
+extern ULONG      g_target_pid;
 
 NTKERNELAPI NTSTATUS MmCopyVirtualMemory(
     PEPROCESS        SourceProcess,
@@ -22,8 +23,12 @@ NTSTATUS OpAttach(ULONG Pid)
         ObDereferenceObject(g_target);
         g_target = NULL;
     }
+    g_target_pid = Pid;
     HANDLE hpid = ULongToHandle(Pid);
-    return PsLookupProcessByProcessId(hpid, &g_target);
+    NTSTATUS st = PsLookupProcessByProcessId(hpid, &g_target);
+    if (!NT_SUCCESS(st))
+        g_target_pid = 0;
+    return st;
 }
 
 NTSTATUS OpDetach(void)
@@ -33,6 +38,7 @@ NTSTATUS OpDetach(void)
         ObDereferenceObject(g_target);
         g_target = NULL;
     }
+    g_target_pid = 0;
     return STATUS_SUCCESS;
 }
 
