@@ -90,6 +90,7 @@ Always call `process_attach` before any other tool. All subsequent calls operate
 | `memory_query` | Query the VirtualQuery info for a single address (state, type, protection). |
 | `memory_scan` | Scan a memory range for a byte pattern (supports wildcards). Returns matching addresses. |
 | `disassemble` | Disassemble instructions at an address. Takes address and instruction count. |
+| `disassemble_function` | Disassemble a whole function body from a start address until a terminating instruction. |
 | `pe_info` | Return PE headers and metadata for a loaded module. |
 | `pe_exports` | List all exports from a module by name and RVA. |
 | `pe_imports` | List all imported functions and their source DLLs. |

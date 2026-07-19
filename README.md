@@ -137,6 +137,7 @@ Replace the path with wherever your `revkit.exe` lives. The agent will start rev
 | `pe_imports` | dump the import table |
 | `pe_sections` | list PE sections with addresses and flags |
 | `disassemble` | disassemble x64 instructions at an address |
+| `disassemble_function` | disassemble a whole function body from a start address |
 
 ---
 

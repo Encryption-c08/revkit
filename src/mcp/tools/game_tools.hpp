@@ -76,6 +76,62 @@ inline json handle_disassemble(const json& args)
     });
 }
 
+inline json schema_disassemble_function()
+{
+    return json{
+        {"name",        "disassemble_function"},
+        {"description", "Disassemble a whole function: walk linearly from a start address until a terminating instruction (ret/int3/ud2). Returns every instruction in the body."},
+        {"inputSchema", {
+            {"type",       "object"},
+            {"properties", {
+                {"address",   {{"type", "string"},  {"description", "Start address (hex)"}}},
+                {"max_insns", {{"type", "integer"}, {"description", "Max instructions to decode"}, {"default", 1024}}}
+            }},
+            {"required", json::array({"address"})}
+        }}
+    };
+}
+
+inline json handle_disassemble_function(const json& args)
+{
+    auto& mem = revkit::core::Memory::get();
+    if (!mem.is_attached())
+        return tool_err("not attached to a process");
+
+    if (!args.contains("address") || !args["address"].is_string())
+        return tool_err("address required");
+
+    uintptr_t addr = revkit::util::parse_addr(args["address"].get<std::string>());
+
+    size_t max_insns = 1024;
+    if (args.contains("max_insns") && args["max_insns"].is_number_integer())
+    {
+        int m = args["max_insns"].get<int>();
+        if (m > 0 && m <= 8192) max_insns = static_cast<size_t>(m);
+    }
+
+    auto insns = revkit::analysis::disassemble_function(addr, max_insns);
+    if (insns.empty())
+        return tool_err("failed to read memory at " + revkit::util::addr_str(addr));
+
+    json arr = json::array();
+    for (const auto& ins : insns)
+    {
+        arr.push_back({
+            {"address",  revkit::util::addr_str(ins.address)},
+            {"length",   ins.length},
+            {"bytes",    ins.bytes_hex},
+            {"mnemonic", ins.mnemonic}
+        });
+    }
+
+    return tool_ok(json{
+        {"address", revkit::util::addr_str(addr)},
+        {"count",   insns.size()},
+        {"insns",   arr}
+    });
+}
+
 inline json schema_value_scan()
 {
     return json{

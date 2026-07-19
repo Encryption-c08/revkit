@@ -78,6 +78,10 @@ static constexpr const char* k_ymm[] = {
     "ymm0","ymm1","ymm2","ymm3","ymm4","ymm5","ymm6","ymm7",
     "ymm8","ymm9","ymm10","ymm11","ymm12","ymm13","ymm14","ymm15"
 };
+static constexpr const char* k_zmm[] = {
+    "zmm0","zmm1","zmm2","zmm3","zmm4","zmm5","zmm6","zmm7",
+    "zmm8","zmm9","zmm10","zmm11","zmm12","zmm13","zmm14","zmm15"
+};
 
 struct DecodeCtx
 {
@@ -94,6 +98,14 @@ struct DecodeCtx
     bool           pfx_66;
     bool           pfx_f2;
     bool           pfx_f3;
+    bool           vex;
+    bool           evex;
+    uint8_t        vex_map;
+    uint8_t        vex_vvvv;
+    uint8_t        vex_l;
+    uint8_t        vex_pp;
+    uint8_t        vex_aaa;
+    bool           vex_z;
 };
 
 inline bool peek(const DecodeCtx& c, uint8_t& out)
@@ -224,6 +236,265 @@ inline std::string reg_from_modrm_reg(const DecodeCtx& c, uint8_t modrm)
     return k_reg8[reg];
 }
 
+inline const char* vx_reg(uint8_t idx, int sz)
+{
+    if (sz <= 0) return k_xmm[idx & 15];
+    if (sz == 1) return k_ymm[idx & 15];
+    return k_zmm[idx & 15];
+}
+
+inline int vex_size(const DecodeCtx& c)
+{
+    if (c.evex && c.vex_l >= 2) return 2;
+    if (c.vex_l == 1)            return 1;
+    return 0;
+}
+
+inline std::string decode_vex(DecodeCtx& c, uint8_t op, uintptr_t va)
+{
+    int sz = vex_size(c);
+
+    auto vx_reg_from_modrm = [&](uint8_t modrm) -> std::string
+    {
+        uint8_t r = ((modrm >> 3) & 7) | (c.rex_r ? 8 : 0);
+        return vx_reg(r, sz);
+    };
+    auto vx_rm = [&](uint8_t modrm) -> std::string
+    {
+        uint8_t rm = (modrm & 7) | (c.rex_b ? 8 : 0);
+        return vx_reg(rm, sz);
+    };
+    auto memop = [&](uint8_t modrm) -> std::string
+    {
+        uint8_t saved = c.opr_sz; c.opr_sz = 8;
+        std::string s = decode_modrm_rm(c, modrm, va);
+        c.opr_sz = saved;
+        return s;
+    };
+    auto mask = [&]() -> std::string
+    {
+        std::string m;
+        if (c.evex)
+        {
+            if (c.vex_aaa) m += " {k" + std::to_string(c.vex_aaa) + "}";
+            if (c.vex_z)   m += "{z}";
+        }
+        return m;
+    };
+    auto load = [&](const char* name) -> std::string
+    {
+        uint8_t modrm = 0; if (!consume(c, modrm)) return std::string(name) + " ??";
+        std::string dst = vx_reg_from_modrm(modrm);
+        uint8_t  md  = (modrm >> 6) & 3;
+        std::string src = (md == 3) ? vx_rm(modrm) : memop(modrm);
+        return std::string(name) + " " + dst + ", " + src + mask();
+    };
+    auto store = [&](const char* name) -> std::string
+    {
+        uint8_t modrm = 0; if (!consume(c, modrm)) return std::string(name) + " ??";
+        uint8_t  md  = (modrm >> 6) & 3;
+        std::string dst = (md == 3) ? vx_rm(modrm) : memop(modrm);
+        std::string src = vx_reg_from_modrm(modrm);
+        return std::string(name) + " " + dst + ", " + src + mask();
+    };
+    auto tri = [&](const char* name) -> std::string
+    {
+        uint8_t modrm = 0; if (!consume(c, modrm)) return std::string(name) + " ??";
+        std::string dst = vx_reg_from_modrm(modrm);
+        std::string s1  = vx_reg(c.vex_vvvv, sz);
+        uint8_t  md  = (modrm >> 6) & 3;
+        std::string s2 = (md == 3) ? vx_rm(modrm) : memop(modrm);
+        return std::string(name) + " " + dst + ", " + s1 + ", " + s2 + mask();
+    };
+    auto tri_imm = [&](const char* name) -> std::string
+    {
+        uint8_t modrm = 0; if (!consume(c, modrm)) return std::string(name) + " ??";
+        std::string dst = vx_reg_from_modrm(modrm);
+        std::string s1  = vx_reg(c.vex_vvvv, sz);
+        uint8_t  md  = (modrm >> 6) & 3;
+        std::string s2 = (md == 3) ? vx_rm(modrm) : memop(modrm);
+        uint8_t  imm = 0; consume(c, imm);
+        return std::string(name) + " " + dst + ", " + s1 + ", " + s2 + ", " + hex32(imm) + mask();
+    };
+    auto extract = [&](const char* name) -> std::string
+    {
+        uint8_t modrm = 0; if (!consume(c, modrm)) return std::string(name) + " ??";
+        uint8_t  md  = (modrm >> 6) & 3;
+        std::string dst = (md == 3) ? k_reg32[(modrm & 7) | (c.rex_b ? 8 : 0)] : memop(modrm);
+        std::string src = vx_reg_from_modrm(modrm);
+        uint8_t  imm = 0; consume(c, imm);
+        return std::string(name) + " " + dst + ", " + src + ", " + hex32(imm) + mask();
+    };
+    auto insert = [&](const char* name) -> std::string
+    {
+        uint8_t modrm = 0; if (!consume(c, modrm)) return std::string(name) + " ??";
+        std::string dst = vx_reg_from_modrm(modrm);
+        uint8_t  md  = (modrm >> 6) & 3;
+        std::string s1  = (md == 3) ? k_reg32[(modrm & 7) | (c.rex_b ? 8 : 0)] : memop(modrm);
+        std::string s2  = vx_reg(c.vex_vvvv, sz);
+        uint8_t  imm = 0; consume(c, imm);
+        return std::string(name) + " " + dst + ", " + s1 + ", " + s2 + ", " + hex32(imm) + mask();
+    };
+    auto ppname = [&](const char* np, const char* p66,
+                      const char* pf3, const char* pf2) -> const char*
+    {
+        if (c.vex_pp == 3) return pf2;
+        if (c.vex_pp == 2) return pf3;
+        if (c.vex_pp == 1) return p66;
+        return np;
+    };
+    auto fma = [&](const char* base) -> std::string
+    {
+        const char* suf = ppname("ps", "pd", "ss", "sd");
+        uint8_t modrm = 0; if (!consume(c, modrm)) return std::string(base) + " ??";
+        std::string dst = vx_reg_from_modrm(modrm);
+        std::string s1  = vx_reg(c.vex_vvvv, sz);
+        uint8_t  md  = (modrm >> 6) & 3;
+        std::string s2 = (md == 3) ? vx_rm(modrm) : memop(modrm);
+        return std::string(base) + suf + " " + dst + ", " + s1 + ", " + s2 + mask();
+    };
+
+    if (c.vex_map == 1)
+    {
+        switch (op)
+        {
+        case 0x10: return load(ppname("vmovups","vmovupd","vmovss","vmovsd"));
+        case 0x11: return store(ppname("vmovups","vmovupd","vmovss","vmovsd"));
+        case 0x28: return load(ppname("vmovaps","vmovapd","vmovaps","vmovaps"));
+        case 0x29: return store(ppname("vmovaps","vmovapd","vmovaps","vmovaps"));
+        case 0x2B: return store(ppname("vmovntps","vmovntpd","vmovntps","vmovntps"));
+        case 0x51: return load(ppname("vsqrtps","vsqrtpd","vsqrtss","vsqrtsd"));
+        case 0x52: return load(ppname("vrcpps","vrcpps","vrcpss","vrcpss"));
+        case 0x53: return load(ppname("vrcpps","vrcpps","vrcpss","vrcpss"));
+        case 0x54: return tri(ppname("vandps","vandpd","vandps","vandps"));
+        case 0x55: return tri(ppname("vandnps","vandnpd","vandnps","vandnps"));
+        case 0x56: return tri(ppname("vorps","vorpd","vorps","vorps"));
+        case 0x57: return tri(ppname("vxorps","vxorpd","vxorps","vxorps"));
+        case 0x58: return tri(ppname("vaddps","vaddpd","vaddss","vaddsd"));
+        case 0x59: return tri(ppname("vmulps","vmulpd","vmulss","vmulsd"));
+        case 0x5A: return load(ppname("vcvtps2pd","vcvtpd2ps","vcvtss2sd","vcvtsd2ss"));
+        case 0x5B: return load(ppname("vcvtps2dq","vcvtpd2dq","vcvttps2dq","vcvtpd2dq"));
+        case 0x5C: return tri(ppname("vsubps","vsubpd","vsubss","vsubsd"));
+        case 0x5D: return tri(ppname("vminps","vminpd","vminss","vminsd"));
+        case 0x5E: return tri(ppname("vdivps","vdivpd","vdivss","vdivsd"));
+        case 0x5F: return tri(ppname("vmaxps","vmaxpd","vmaxss","vmaxsd"));
+        case 0x60: return tri("vpunpcklbw");
+        case 0x61: return tri("vpunpcklwd");
+        case 0x62: return tri("vpunpckldq");
+        case 0x63: return tri("vpacksswb");
+        case 0x64: return tri("vpcmpgtb");
+        case 0x65: return tri("vpcmpgtw");
+        case 0x66: return tri("vpcmpgtd");
+        case 0x67: return tri("vpackuswb");
+        case 0x68: return tri("vpunpckhbw");
+        case 0x69: return tri("vpunpckhwd");
+        case 0x6A: return tri("vpunpckhdq");
+        case 0x6B: return tri("vpackssdw");
+        case 0x6E: return load("vmovd");
+        case 0x6F: return load(ppname("vmovdqa","vmovdqu","vmovdqa","vmovdqu"));
+        case 0x70: return tri_imm(ppname("vpshufd","vpshufd","vpshuflw","vpshufhw"));
+        case 0x74: return tri("vpcmpeqb");
+        case 0x75: return tri("vpcmpeqw");
+        case 0x76: return tri("vpcmpeqd");
+        case 0x7C: return tri(ppname("vhaddps","vhaddpd","vhaddps","vhaddps"));
+        case 0x7D: return tri(ppname("vhsubps","vhsubpd","vhsubps","vhsubps"));
+        case 0x7E: return load("vmovq");
+        case 0x7F: return store(ppname("vmovdqa","vmovdqu","vmovdqa","vmovdqu"));
+        case 0xC2: return tri_imm(ppname("vcmpps","vcmppd","vcmpss","vcmpsd"));
+        case 0xC6: return tri_imm(ppname("vshufps","vshufpd","vshufps","vshufps"));
+        case 0xDB: return tri("vpand");
+        case 0xEB: return tri("vpor");
+        case 0xEF: return tri("vpxor");
+        case 0xFC: return tri("vpaddb");
+        case 0xFD: return tri("vpaddw");
+        case 0xFE: return tri("vpaddd");
+        case 0xF8: return tri("vpsubb");
+        case 0xF9: return tri("vpsubw");
+        case 0xFA: return tri("vpsubd");
+        case 0xFB: return tri("vpsubq");
+        default:   return std::string("v??? 0F ") + hex32(op);
+        }
+    }
+    else if (c.vex_map == 2)
+    {
+        switch (op)
+        {
+        case 0x00: return tri("vpshufb");
+        case 0x01: return tri("vphaddw");
+        case 0x02: return tri("vphaddd");
+        case 0x03: return tri("vphaddsw");
+        case 0x04: return tri("vpmaddubsw");
+        case 0x05: return tri("vphsubw");
+        case 0x06: return tri("vphsubd");
+        case 0x07: return tri("vphsubsw");
+        case 0x08: return tri("vpsignb");
+        case 0x09: return tri("vpsignw");
+        case 0x0A: return tri("vpsignd");
+        case 0x0B: return tri("vpmulhrsw");
+        case 0x17: return load(ppname("vptest","vptest","vptest","vptest"));
+        case 0x1C: return load("vpabsb");
+        case 0x1D: return load("vpabsw");
+        case 0x1E: return load("vpabsd");
+        case 0x20: return load("vpmovsxbw");
+        case 0x21: return load("vpmovsxbd");
+        case 0x22: return load("vpmovsxbq");
+        case 0x23: return load("vpmovsxwd");
+        case 0x24: return load("vpmovsxwq");
+        case 0x25: return load("vpmovsxdq");
+        case 0x30: return load("vpmovzxbw");
+        case 0x31: return load("vpmovzxbd");
+        case 0x32: return load("vpmovzxbq");
+        case 0x33: return load("vpmovzxwd");
+        case 0x34: return load("vpmovzxwq");
+        case 0x35: return load("vpmovzxdq");
+        case 0x28: return tri("vpmuldq");
+        case 0x29: return tri("vpmuludq");
+        case 0x2B: return tri("vpackusdw");
+        case 0x36: return tri(ppname("vpermd","vpermd","vpermd","vpermd"));
+        case 0x37: return tri(ppname("vpermq","vpermq","vpermq","vpermq"));
+        case 0x58: return load("vpbroadcastd");
+        case 0x59: return load(ppname("vbroadcastss","vbroadcastss","vbroadcastss","vbroadcastss"));
+        case 0x5A: return load(ppname("vbroadcastsd","vbroadcastsd","vbroadcastsd","vbroadcastsd"));
+        case 0x5B: return load(ppname("vbroadcastf128","vbroadcastf128","vbroadcastf128","vbroadcastf128"));
+        case 0x78: return load("vpbroadcastb");
+        case 0x79: return load("vpbroadcastw");
+        case 0x96: return fma("vfmsub132");
+        case 0x97: return fma("vfmsub213");
+        case 0x98: return fma("vfmadd132");
+        case 0x99: return fma("vfmadd213");
+        case 0x9A: return fma("vfmadd231");
+        case 0x9B: return fma("vfmsub231");
+        case 0x9C: return fma("vfnmadd132");
+        case 0x9D: return fma("vfnmadd213");
+        case 0x9E: return fma("vfnmadd231");
+        default:   return std::string("v??? 0F38 ") + hex32(op);
+        }
+    }
+    else if (c.vex_map == 3)
+    {
+        switch (op)
+        {
+        case 0x0C: return tri_imm(ppname("vblendps","vblendps","vblendps","vblendps"));
+        case 0x0D: return tri_imm(ppname("vblendpd","vblendpd","vblendpd","vblendpd"));
+        case 0x0E: return tri_imm(ppname("vblendvps","vblendvps","vblendvps","vblendvps"));
+        case 0x0F: return tri_imm(ppname("vblendvpd","vblendvpd","vblendvpd","vblendvpd"));
+        case 0x14: return extract("vpextrb");
+        case 0x15: return extract("vpextrw");
+        case 0x16: return extract("vpextrd");
+        case 0x20: return insert("vpinsrb");
+        case 0x21: return insert("vpinsrd");
+        case 0x22: return insert("vpinsrq");
+        case 0x40: return tri_imm(ppname("vdpps","vdpps","vdpps","vdpps"));
+        case 0x41: return tri_imm(ppname("vdppd","vdppd","vdppd","vdppd"));
+        case 0x44: return tri_imm(ppname("vpclmulqdq","vpclmulqdq","vpclmulqdq","vpclmulqdq"));
+        case 0x46: return tri_imm(ppname("vperm2i128","vperm2i128","vperm2i128","vperm2i128"));
+        default:   return std::string("v??? 0F3A ") + hex32(op);
+        }
+    }
+
+    return std::string("v??? map") + hex32(c.vex_map) + " " + hex32(op);
+}
+
 inline Instruction decode_one(const uint8_t* buf, size_t cap, uintptr_t va, bool x64)
 {
     Instruction ins{};
@@ -243,6 +514,14 @@ inline Instruction decode_one(const uint8_t* buf, size_t cap, uintptr_t va, bool
     c.pfx_66 = false;
     c.pfx_f2 = false;
     c.pfx_f3 = false;
+    c.vex     = false;
+    c.evex    = false;
+    c.vex_map = 0;
+    c.vex_vvvv = 0;
+    c.vex_l   = 0;
+    c.vex_pp  = 0;
+    c.vex_aaa = 0;
+    c.vex_z   = false;
 
     if (cap == 0)
     {
@@ -275,6 +554,72 @@ inline Instruction decode_one(const uint8_t* buf, size_t cap, uintptr_t va, bool
             if (c.rex_w) c.opr_sz = 8;
             continue;
         }
+
+        if (x64 && b == 0xC4)
+        {
+            uint8_t v1 = 0, v2 = 0;
+            if (!consume(c, v1) || !consume(c, v2))
+            {
+                ins.length = (uint8_t)c.pos;
+                ins.bytes_hex = bytes_to_hex(buf, ins.length);
+                ins.mnemonic = "??";
+                return ins;
+            }
+            c.rex_r  = ((v1 >> 7) & 1) ? 0 : 1;
+            c.rex_x  = ((v1 >> 6) & 1) ? 0 : 1;
+            c.rex_b  = ((v1 >> 5) & 1) ? 0 : 1;
+            c.vex_map = v1 & 0x1F;
+            c.rex_w  = (v2 >> 7) & 1;
+            c.vex_vvvv = (v2 >> 3) & 0xF;
+            c.vex_l  = (v2 >> 2) & 1;
+            c.vex_pp = v2 & 0x3;
+            c.vex    = true;
+            continue;
+        }
+        if (x64 && b == 0xC5)
+        {
+            uint8_t v1 = 0;
+            if (!consume(c, v1))
+            {
+                ins.length = (uint8_t)c.pos;
+                ins.bytes_hex = bytes_to_hex(buf, ins.length);
+                ins.mnemonic = "??";
+                return ins;
+            }
+            c.rex_r  = ((v1 >> 7) & 1) ? 0 : 1;
+            c.vex_map = 1;
+            c.rex_w  = 0;
+            c.vex_vvvv = (v1 >> 3) & 0xF;
+            c.vex_l  = (v1 >> 2) & 1;
+            c.vex_pp = v1 & 0x3;
+            c.vex    = true;
+            continue;
+        }
+        if (x64 && b == 0x62)
+        {
+            uint8_t p0 = 0, p1 = 0, p2 = 0;
+            if (!consume(c, p0) || !consume(c, p1) || !consume(c, p2))
+            {
+                ins.length = (uint8_t)c.pos;
+                ins.bytes_hex = bytes_to_hex(buf, ins.length);
+                ins.mnemonic = "??";
+                return ins;
+            }
+            c.rex_r  = ((p0 >> 7) & 1) ? 0 : 1;
+            c.rex_x  = ((p0 >> 6) & 1) ? 0 : 1;
+            c.rex_b  = ((p0 >> 5) & 1) ? 0 : 1;
+            c.rex_w  = (p1 >> 7) & 1;
+            c.vex_map = p0 & 0x1F;
+            c.vex_vvvv = ((p1 >> 3) & 0xF) | (((p0 >> 4) & 1) << 4);
+            c.vex_l  = ((p2 >> 6) & 1) << 1 | ((p2 >> 5) & 1);
+            c.vex_aaa = p2 & 0x7;
+            c.vex_z  = (p2 >> 7) & 1;
+            c.vex_pp = (c.pfx_66 ? 1 : 0) | (c.pfx_f2 ? 3 : 0) | (c.pfx_f3 ? 2 : 0);
+            c.evex   = true;
+            c.vex    = true;
+            continue;
+        }
+
         break;
     }
 
@@ -326,7 +671,15 @@ inline Instruction decode_one(const uint8_t* buf, size_t cap, uintptr_t va, bool
         return (cc < 16) ? names[cc] : "jcc";
     };
 
-    switch (op)
+    if (c.vex)
+    {
+        uint8_t op2 = 0;
+        if (!consume(c, op2))
+            mnem = "??";
+        else
+            mnem = detail::decode_vex(c, op2, va);
+    }
+    else switch (op)
     {
         case 0x00: mnem = emit_rm_reg("add", true);  break;
         case 0x01: mnem = emit_rm_reg("add", true);  break;
@@ -888,6 +1241,47 @@ inline std::vector<Instruction> disassemble(uintptr_t address, size_t count)
         if (ins.length == 0) ins.length = 1;
         result.push_back(ins);
         offset += ins.length;
+    }
+
+    return result;
+}
+
+inline std::vector<Instruction> disassemble_function(uintptr_t address,
+                                                     size_t max_insns = 2048)
+{
+    std::vector<Instruction> result;
+
+    auto& mem = revkit::core::Memory::get();
+    if (!mem.is_attached())
+        return result;
+
+    bool x64 = true;
+    std::vector<uint8_t> buf;
+    size_t offset = 0;
+    static constexpr size_t k_chunk = 0x10000;
+
+    while (result.size() < max_insns)
+    {
+        if (offset >= buf.size())
+        {
+            auto more = mem.read_safe(address + offset, k_chunk);
+            if (more.empty()) break;
+            buf.insert(buf.end(), more.begin(), more.end());
+        }
+
+        size_t remaining = buf.size() - offset;
+        auto ins = detail::decode_one(buf.data() + offset, remaining,
+                                      address + offset, x64);
+        if (ins.length == 0) ins.length = 1;
+        result.push_back(ins);
+
+        offset += ins.length;
+
+        const std::string& m = ins.mnemonic;
+        if (m == "ret" || m.rfind("ret ", 0) == 0 ||
+            m == "int3" || m == "ud2" || m == "iretd" || m == "iret" ||
+            m == "??"   || m.rfind("db ", 0) == 0)
+            break;
     }
 
     return result;

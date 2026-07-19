@@ -32,6 +32,7 @@ Server::Server()
     register_tool(tools::schema_string_scan(),     tools::handle_string_scan);
 
     register_tool(tools::schema_disassemble(),      tools::handle_disassemble);
+    register_tool(tools::schema_disassemble_function(), tools::handle_disassemble_function);
     register_tool(tools::schema_value_scan(),       tools::handle_value_scan);
     register_tool(tools::schema_xref_scan(),        tools::handle_xref_scan);
     register_tool(tools::schema_module_info_full(), tools::handle_module_info_full);

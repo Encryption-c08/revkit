@@ -126,6 +126,8 @@ static NTSTATUS DeviceOffline(PDEVICE_OBJECT DeviceObject, PIRP Irp)
     return STATUS_DEVICE_NOT_CONNECTED;
 }
 
+static VOID ProcessNotifyRoutine(HANDLE ParentId, HANDLE ProcessId, BOOLEAN Create);
+
 VOID DriverSelfUnload(VOID)
 {
     UNICODE_STRING lnk;
