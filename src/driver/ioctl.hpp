@@ -14,6 +14,7 @@
 #define CR_IOCTL_QUERY          CTL_CODE(CR_DEVICE_TYPE, 0xA15, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define CR_IOCTL_UNLOAD         CTL_CODE(CR_DEVICE_TYPE, 0xA16, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define CR_IOCTL_WRITE_PHYSICAL CTL_CODE(CR_DEVICE_TYPE, 0xA1D, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define CR_IOCTL_READ_PHYSICAL  CTL_CODE(CR_DEVICE_TYPE, 0xA1F, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define CR_IOCTL_KERNEL_READ    CTL_CODE(CR_DEVICE_TYPE, 0xA1E, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 #pragma pack(push, 1)
@@ -22,6 +23,7 @@ struct CrReadIn       { uint64_t address; uint64_t size;                        
 struct CrWriteIn      { uint64_t address; uint64_t size;                                        };
 struct CrQueryIn      { uint64_t address;                                                       };
 struct CrWritePhysIn  { uint64_t address; uint64_t size;                                        };
+struct CrReadPhysIn   { uint64_t address; uint64_t size;                                        };
 struct CrQueryOut     { uint64_t base; uint64_t size; uint32_t protect; uint32_t type; uint32_t state; };
 #pragma pack(pop)
 

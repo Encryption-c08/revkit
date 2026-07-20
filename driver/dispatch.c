@@ -13,6 +13,7 @@ extern NTSTATUS OpRead(ULONG64 Address, ULONG64 Size, PVOID OutBuf, PULONG64 Byt
 extern NTSTATUS OpWrite(ULONG64 Address, ULONG64 Size, PVOID Data, PULONG64 BytesWritten);
 extern NTSTATUS OpQuery(ULONG64 Address, CR_QUERY_OUT* Out);
 extern NTSTATUS OpWritePhysical(ULONG64 VirtAddr, ULONG64 Size, PVOID Data);
+extern NTSTATUS OpReadPhysical(ULONG64 VirtAddr, ULONG64 Size, PVOID OutBuf, PULONG64 BytesRead);
 extern NTSTATUS OpKernelRead(ULONG64 Address, ULONG64 Size, PVOID OutBuf, PULONG64 BytesRead);
 
 NTSTATUS DispatchControl(PIRP Irp, PIO_STACK_LOCATION Stack)
@@ -78,6 +79,17 @@ NTSTATUS DispatchControl(PIRP Irp, PIO_STACK_LOCATION Stack)
             if (in_len < sizeof(CR_WRITE_PHYS_IN) + hdr->size) break;
             PVOID data = (PUCHAR)buf + sizeof(CR_WRITE_PHYS_IN);
             status = OpWritePhysical(hdr->address, hdr->size, data);
+        }
+        break;
+
+    case CR_IOCTL_READ_PHYSICAL:
+        if (in_len < sizeof(CR_READ_PHYS_IN)) break;
+        {
+            CR_READ_PHYS_IN* hdr = (CR_READ_PHYS_IN*)buf;
+            if (out_len < hdr->size) { status = STATUS_BUFFER_TOO_SMALL; break; }
+            ULONG64 bytes_read = 0;
+            status = OpReadPhysical(hdr->address, hdr->size, buf, &bytes_read);
+            info = (ULONG_PTR)bytes_read;
         }
         break;
 

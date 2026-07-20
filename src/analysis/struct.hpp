@@ -108,6 +108,115 @@ inline std::string read_utf16(uintptr_t at, size_t length)
 
 }
 
+inline bool write_number(const std::string& type, uintptr_t at, const std::string& value)
+{
+    auto& mem = revkit::core::Memory::get();
+    try
+    {
+        if (type == "u8"  || type == "bool") { uint8_t  v = (uint8_t)std::stoul(value);        return mem.write(at, &v, 1); }
+        if (type == "i8")                     { int8_t   v = (int8_t)std::stoi(value);         return mem.write(at, &v, 1); }
+        if (type == "u16")                    { uint16_t v = (uint16_t)std::stoul(value);      return mem.write(at, &v, 2); }
+        if (type == "i16")                    { int16_t  v = (int16_t)std::stoi(value);        return mem.write(at, &v, 2); }
+        if (type == "u32")                    { uint32_t v = (uint32_t)std::stoul(value);      return mem.write(at, &v, 4); }
+        if (type == "i32")                    { int32_t  v = (int32_t)std::stoi(value);        return mem.write(at, &v, 4); }
+        if (type == "u64" || type == "ptr")   { uint64_t v = (uint64_t)std::stoull(value, nullptr, 0); return mem.write(at, &v, 8); }
+        if (type == "i64")                    { int64_t  v = (int64_t)std::stoll(value);       return mem.write(at, &v, 8); }
+        if (type == "f32")                    { float    v = std::stof(value);                 return mem.write(at, &v, 4); }
+        if (type == "f64")                    { double   v = std::stod(value);                 return mem.write(at, &v, 8); }
+    }
+    catch (...) { return false; }
+    return false;
+}
+
+inline bool write_vec(const std::string& type, uintptr_t at, const std::string& value)
+{
+    auto& mem = revkit::core::Memory::get();
+    float comp[3] = { 0, 0, 0 };
+    int n = (type == "vec3") ? 3 : 2;
+    size_t idx = 0;
+    std::string tok;
+    for (char c : value)
+    {
+        if (c == ',' || c == ' ' || c == '(' || c == ')')
+        {
+            if (!tok.empty() && idx < 3)
+            {
+                try { comp[idx++] = std::stof(tok); } catch (...) {}
+                tok.clear();
+            }
+        }
+        else tok += c;
+    }
+    if (!tok.empty() && idx < 3)
+    {
+        try { comp[idx++] = std::stof(tok); } catch (...) {}
+    }
+    return mem.write(at, comp, (size_t)n * sizeof(float));
+}
+
+inline bool write_str(uintptr_t at, size_t length, const std::string& value, bool utf16)
+{
+    auto& mem = revkit::core::Memory::get();
+    if (utf16)
+    {
+        size_t n = length ? length : value.size();
+        std::vector<uint8_t> buf((n + 1) * 2, 0);
+        for (size_t i = 0; i < value.size() && i < n; ++i)
+        {
+            uint16_t c = (uint16_t)(unsigned char)value[i];
+            buf[i * 2]     = (uint8_t)(c & 0xFF);
+            buf[i * 2 + 1] = (uint8_t)(c >> 8);
+        }
+        return mem.write(at, buf.data(), (n + 1) * 2);
+    }
+    size_t n = length ? length : value.size();
+    std::vector<uint8_t> buf(n + 1, 0);
+    for (size_t i = 0; i < value.size() && i < n; ++i)
+        buf[i] = (uint8_t)value[i];
+    return mem.write(at, buf.data(), n + 1);
+}
+
+inline size_t write_struct(uintptr_t base,
+                           const std::vector<StructField>& fields,
+                           const std::vector<std::string>& values)
+{
+    auto& mem = revkit::core::Memory::get();
+    if (!mem.is_attached())
+        return 0;
+
+    size_t written = 0;
+    size_t vi = 0;
+    for (const auto& f : fields)
+    {
+        size_t elem = detail::field_elem_size(f.type);
+        size_t count = f.count ? f.count : 1;
+
+        if (f.type == "str" || f.type == "utf16")
+        {
+            if (vi < values.size() && write_str(base + f.offset, f.length, values[vi], f.type == "utf16"))
+                ++written;
+            ++vi;
+            continue;
+        }
+        if (f.type == "vec2" || f.type == "vec3")
+        {
+            if (vi < values.size() && write_vec(f.type, base + f.offset, values[vi]))
+                ++written;
+            ++vi;
+            continue;
+        }
+
+        for (size_t i = 0; i < count; ++i)
+        {
+            if (vi >= values.size()) break;
+            if (write_number(f.type, base + f.offset + i * elem, values[vi]))
+                ++written;
+            ++vi;
+        }
+    }
+    return written;
+}
+
 inline std::vector<StructValue> read_struct(uintptr_t base,
                                             const std::vector<StructField>& fields)
 {

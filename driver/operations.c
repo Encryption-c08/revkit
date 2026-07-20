@@ -104,6 +104,45 @@ NTSTATUS OpWritePhysical(ULONG64 VirtAddr, ULONG64 Size, PVOID Data)
     return status;
 }
 
+NTSTATUS OpReadPhysical(ULONG64 VirtAddr, ULONG64 Size, PVOID OutBuf, PULONG64 BytesRead)
+{
+    KAPC_STATE apc_state;
+    PHYSICAL_ADDRESS phys;
+    PVOID mapped;
+    ULONG64 page_offset;
+    ULONG64 map_size;
+    NTSTATUS status = STATUS_SUCCESS;
+
+    *BytesRead = 0;
+
+    if (!g_target) return STATUS_INVALID_HANDLE;
+    if (Size == 0 || Size > 4096) return STATUS_INVALID_PARAMETER;
+
+    KeStackAttachProcess(g_target, &apc_state);
+    phys = MmGetPhysicalAddress((PVOID)(ULONG_PTR)VirtAddr);
+    KeUnstackDetachProcess(&apc_state);
+
+    if (phys.QuadPart == 0) return STATUS_INVALID_ADDRESS;
+
+    page_offset = VirtAddr & 0xFFF;
+    map_size    = page_offset + Size;
+    if (map_size > 0x2000) return STATUS_INVALID_PARAMETER;
+
+    {
+        PHYSICAL_ADDRESS page_base;
+        page_base.QuadPart = phys.QuadPart & ~(LONGLONG)0xFFF;
+        mapped = MmMapIoSpaceEx(page_base, (SIZE_T)map_size, PAGE_READONLY);
+        if (!mapped) return STATUS_INSUFFICIENT_RESOURCES;
+
+        RtlCopyMemory((PUCHAR)OutBuf, (PUCHAR)mapped + page_offset, (SIZE_T)Size);
+
+        MmUnmapIoSpace(mapped, (SIZE_T)map_size);
+    }
+
+    *BytesRead = Size;
+    return status;
+}
+
 NTSTATUS OpKernelRead(ULONG64 Address, ULONG64 Size, PVOID OutBuf, PULONG64 BytesRead)
 {
     /* Max 4 MB per call — caller loops for larger ranges */

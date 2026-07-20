@@ -54,15 +54,19 @@ From ring-0 it can:
 ## features
 
 - kernel read/write (ring-0, no handle needed)
-- physical PTE stealth writes
+- physical PTE stealth writes + physical reads
 - MCP HTTP server on localhost, any AI agent can connect
 - web UI (WebView2 / Chromium) with real-time logs, activity graphs, write dialog
 - x64 disassembler with full SSE/AVX opcode support
 - PE parser - sections, exports, imports, full headers
-- pattern scanner, value scanner, string scanner (ASCII + UTF-16)
+- pattern scanner (memory_scan + search_opcode), value scanner, string scanner (ASCII + UTF-16)
 - xref scanner - find all code that references an address
 - pointer chain walker
+- struct reader/writer + struct layout generator (struct_def)
+- kernel-space reader (kernel_read) and driver status probe
+- module dumps, raw memory dumps, and kernel module dumps to disk
 - module list with base addresses and sizes
+- in-app console commands: `/load` `/unload` `/reload` `/status` `/verbose`
 
 ---
 
@@ -138,6 +142,16 @@ Replace the path with wherever your `revkit.exe` lives. The agent will start rev
 | `pe_sections` | list PE sections with addresses and flags |
 | `disassemble` | disassemble x64 instructions at an address |
 | `disassemble_function` | disassemble a whole function body from a start address |
+| `search_opcode` | scan a module/range/process for an IDA-style byte pattern with `??` wildcards |
+| `read_struct` | decode a struct at an address using an offset+type field layout |
+| `write_struct` | write typed fields back to a struct at an address |
+| `struct_def` | dump a region as a guessed typed layout to bootstrap a struct |
+| `kernel_read` | read directly from kernel virtual address space (no attach needed) |
+| `read_physical` | read a virtual address through its physical mapping (bypasses page guards) |
+| `driver_status` | report driver state: device open, attached pid, active backend |
+| `dump_module` | dump a loaded PE module from the attached process to a file |
+| `dump_memory` | dump a raw memory range from the attached process to a file |
+| `kernel_module_dump` | dump a kernel module (ntoskrnl, drivers) from ring-0 memory to a file |
 
 ---
 
@@ -150,7 +164,26 @@ memory_read     ->  address: 0x7FF800000000, size: 64
 pe_exports      ->  address: 0x7FF800000000
 disassemble     ->  address: 0x7FF800401234, count: 30
 pointer_chain   ->  base: 0x7FF900000000, offsets: [0x10, 0x28, 0x8]
+search_opcode   ->  module: "engine.dll", pattern: "48 8B ?? 05 ?? ?? ?? ??"
+read_struct     ->  address: 0x7FF900123000, fields: [{name:"hp", offset:0x0, type:"f32"}, {name:"ammo", offset:0x4, type:"u32"}]
+kernel_read     ->  address: 0xFFFFF804..., size: 128
 ```
+
+---
+
+## console commands
+
+revkit has an in-app console (open the GUI and type into the command box). Useful commands:
+
+| command | what it does |
+|---------|--------------|
+| `/load` | map the driver via kdmapper if not already loaded |
+| `/unload` | send the unload IOCTL, remove the device/symlink |
+| `/reload` | unload then re-map in one step — swap in a rebuilt `revkit-driver.sys` without rebooting |
+| `/status` | show driver + attach state |
+| `/verbose` | toggle verbose logging |
+
+The device name is derived from a compile-time seed constant (`\Device\7E4A9C3F`), so a stale device left by a previous mapping is cleaned up automatically on re-map.
 
 ---
 

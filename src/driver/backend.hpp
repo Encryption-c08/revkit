@@ -84,6 +84,17 @@ public:
             nullptr, 0, &returned, nullptr) != FALSE;
     }
 
+    bool read_physical(uintptr_t addr, void* out, size_t size)
+    {
+        if (!is_attached() || !out || size == 0 || size > 4096) return false;
+        CrReadPhysIn hdr{ static_cast<uint64_t>(addr), static_cast<uint64_t>(size) };
+        DWORD returned = 0;
+        return DeviceIoControl(device_, CR_IOCTL_READ_PHYSICAL,
+            &hdr, sizeof(hdr),
+            out, static_cast<DWORD>(size),
+            &returned, nullptr) != FALSE;
+    }
+
     bool write(uintptr_t addr, const void* data, size_t size)
     {
         if (!is_attached() || !data || size == 0) return false;

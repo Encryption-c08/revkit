@@ -5,6 +5,9 @@
 #include "tools/game_tools.hpp"
 #include "tools/dump_tools.hpp"
 #include "tools/struct_tools.hpp"
+#include "tools/kernel_tools.hpp"
+#include "tools/scan_tools.hpp"
+#include "tools/structgen_tools.hpp"
 
 namespace revkit::mcp
 {
@@ -43,6 +46,14 @@ Server::Server()
     register_tool(tools::schema_kernel_module_dump(), tools::handle_kernel_module_dump);
 
     register_tool(tools::schema_read_struct(),        tools::handle_read_struct);
+    register_tool(tools::schema_write_struct(),       tools::handle_write_struct);
+
+    register_tool(tools::schema_kernel_read(),        tools::handle_kernel_read);
+    register_tool(tools::schema_read_physical(),     tools::handle_read_physical);
+    register_tool(tools::schema_driver_status(),     tools::handle_driver_status);
+
+    register_tool(tools::schema_search_opcode(),    tools::handle_search_opcode);
+    register_tool(tools::schema_struct_def(),       tools::handle_struct_def);
 
 }
 
