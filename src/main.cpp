@@ -554,7 +554,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR lpCmdLine, int)
     auto http_ptr = std::make_shared<revkit::net::HttpServer>(
         port,
 
-        [&](const nlohmann::json& body, const std::string& peer) -> nlohmann::json
+        [&](const nlohmann::json& body, const std::string& peer) -> std::optional<nlohmann::json>
         {
             if (!revkit::core::Memory::get().using_driver())
             {
@@ -594,12 +594,14 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR lpCmdLine, int)
             try
             {
                 std::string req_msg  = peer + "  " + req_summary(body);
-                nlohmann::json resp  = mcp_server.handle_request(body);
-                std::string rsp_msg  = resp_summary(resp);
+                auto resp  = mcp_server.handle_request(body);
+                if (!resp.has_value())
+                    return std::nullopt;
+                std::string rsp_msg  = resp_summary(*resp);
                 std::string method   = body.value("method", "");
                 if (g_verbose.load() || method == "tools/call")
                 {
-                    std::string detail = "request:  " + body.dump(2) + "\nresponse: " + resp.dump(2);
+                    std::string detail = "request:  " + body.dump(2) + "\nresponse: " + resp->dump(2);
                     push_log("req",  req_msg, detail);
                     push_log("resp", rsp_msg);
                 }
@@ -608,9 +610,11 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR lpCmdLine, int)
             catch (const std::exception& e)
             {
                 push_log("err", std::string("handler: ") + e.what());
-                return nlohmann::json{
-                    {"jsonrpc","2.0"},{"id",nullptr},
-                    {"error",{{"code",-32603},{"message",std::string(e.what())}}}
+                return std::optional<nlohmann::json>{
+                    nlohmann::json{
+                        {"jsonrpc","2.0"},{"id",nullptr},
+                        {"error",{{"code",-32603},{"message",std::string(e.what())}}}
+                    }
                 };
             }
         },

@@ -63,15 +63,17 @@ void Server::register_tool(json schema, Handler h)
     m_tools[name] = ToolEntry{ std::move(schema), std::move(h) };
 }
 
-json Server::handle_request(const json& j)
+std::optional<json> Server::handle_request(const json& j)
 {
     try
     {
         auto req = Request::parse(j);
         if (!req.has_value())
             return make_error(nullptr, ERR_INVALID, "invalid JSON-RPC request");
-        json resp = dispatch(req.value());
-        return resp.is_null() ? json::object() : resp;
+        auto resp = dispatch(req.value());
+        if (!resp.has_value())
+            return std::nullopt;
+        return resp;
     }
     catch (const std::exception& e)
     {
@@ -79,12 +81,12 @@ json Server::handle_request(const json& j)
     }
 }
 
-json Server::dispatch(const Request& req)
+std::optional<json> Server::dispatch(const Request& req)
 {
+    if (req.method.rfind("notifications/", 0) == 0)
+        return std::nullopt;
     if (req.method == "initialize")
         return make_result(req.id, on_initialize(req.params));
-    if (req.method == "notifications/initialized")
-        return nullptr;
     if (req.method == "ping")
         return make_result(req.id, json::object());
     if (req.method == "tools/list")
@@ -127,7 +129,8 @@ json Server::on_tools_call(const json& params)
     if (params.contains("arguments") && params["arguments"].is_object())
         args = params["arguments"];
 
-    return it->second.handler(args);
+    auto r = it->second.handler(args);
+    return r ? *r : tool_err("handler returned no response");
 }
 
 }

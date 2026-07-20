@@ -7,6 +7,7 @@
 #include <ws2tcpip.h>
 #include <functional>
 #include <string>
+#include <optional>
 #include <sstream>
 #include <algorithm>
 #include <cctype>
@@ -20,7 +21,7 @@ using json = nlohmann::json;
 class HttpServer
 {
 public:
-    using Handler = std::function<json(const json& body, const std::string& peer_ip)>;
+    using Handler = std::function<std::optional<json>(const json& body, const std::string& peer_ip)>;
     using LogFn   = std::function<void(const std::string& level, const std::string& msg)>;
 
     HttpServer(uint16_t port, Handler handler, LogFn log_fn)
@@ -150,39 +151,49 @@ private:
             body.append(tmp, n);
         }
 
-        std::string resp_body;
+        std::optional<json> result;
         if (http_method == "GET" && path == "/health")
         {
-            resp_body = R"({"status":"ok"})";
+            result = json::object({{"status", "ok"}});
         }
         else if (http_method == "POST")
         {
             try
             {
                 json req_json = json::parse(body);
-                json result   = m_handler(req_json, peer_ip);
-                resp_body     = result.dump();
+                result = m_handler(req_json, peer_ip);
             }
             catch (const std::exception& e)
             {
-                resp_body = json{
+                result = json{
                     {"jsonrpc","2.0"},{"id",nullptr},
                     {"error",{{"code",-32700},{"message",std::string(e.what())}}}
-                }.dump();
+                };
             }
         }
         else
         {
-            resp_body = R"({"error":"not found"})";
+            result = json{{"error","not found"}};
         }
 
         std::ostringstream http_resp;
-        http_resp << "HTTP/1.1 200 OK\r\n"
-                  << "Content-Type: application/json\r\n"
-                  << "Content-Length: " << resp_body.size() << "\r\n"
-                  << "Connection: close\r\n"
-                  << "\r\n"
-                  << resp_body;
+        if (!result.has_value())
+        {
+            http_resp << "HTTP/1.1 202 Accepted\r\n"
+                       << "Content-Length: 0\r\n"
+                       << "Connection: close\r\n"
+                       << "\r\n";
+        }
+        else
+        {
+            std::string resp_body = result->dump();
+            http_resp << "HTTP/1.1 200 OK\r\n"
+                       << "Content-Type: application/json\r\n"
+                       << "Content-Length: " << resp_body.size() << "\r\n"
+                       << "Connection: close\r\n"
+                       << "\r\n"
+                       << resp_body;
+        }
         std::string out = http_resp.str();
         send(sock, out.c_str(), (int)out.size(), 0);
     }

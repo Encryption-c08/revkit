@@ -8,7 +8,7 @@
 namespace revkit::mcp
 {
 
-using Handler = std::function<json(const json&)>;
+    using Handler = std::function<std::optional<json>(const json&)>;
 
 struct ToolEntry
 {
@@ -22,10 +22,10 @@ public:
     Server();
     void register_tool(json schema, Handler h);
 
-    json handle_request(const json& j);
+    std::optional<json> handle_request(const json& j);
 
 private:
-    json dispatch(const Request& req);
+    std::optional<json> dispatch(const Request& req);
     json on_initialize(const json& params);
     json on_tools_list(const json& params);
     json on_tools_call(const json& params);
