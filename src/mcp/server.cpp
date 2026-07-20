@@ -4,6 +4,7 @@
 #include "tools/analysis_tools.hpp"
 #include "tools/game_tools.hpp"
 #include "tools/dump_tools.hpp"
+#include "tools/struct_tools.hpp"
 
 namespace revkit::mcp
 {
@@ -40,6 +41,8 @@ Server::Server()
     register_tool(tools::schema_dump_module(),        tools::handle_dump_module);
     register_tool(tools::schema_dump_memory(),        tools::handle_dump_memory);
     register_tool(tools::schema_kernel_module_dump(), tools::handle_kernel_module_dump);
+
+    register_tool(tools::schema_read_struct(),        tools::handle_read_struct);
 
 }
 

@@ -8,6 +8,7 @@ ULONG          g_target_pid = 0;
 
 static WCHAR g_dev_name[32] = {0};
 static WCHAR g_dev_link[48] = {0};
+static WCHAR g_dev_link2[48] = {0};
 
 extern NTSTATUS DispatchControl(PIRP Irp, PIO_STACK_LOCATION Stack);
 
@@ -115,6 +116,14 @@ static void build_names(void)
     g_dev_link[i++] = L'\\';
     for (j = 0; j < 8; j++) g_dev_link[i++] = suffix[j];
     g_dev_link[i] = L'\0';
+
+    i = 0;
+    g_dev_link2[i++] = L'\\'; g_dev_link2[i++] = L'D'; g_dev_link2[i++] = L'o';
+    g_dev_link2[i++] = L's';  g_dev_link2[i++] = L'D'; g_dev_link2[i++] = L'e';
+    g_dev_link2[i++] = L'v';  g_dev_link2[i++] = L'i'; g_dev_link2[i++] = L'c';
+    g_dev_link2[i++] = L'e';  g_dev_link2[i++] = L's'; g_dev_link2[i++] = L'\\';
+    for (j = 0; j < 8; j++) g_dev_link2[i++] = suffix[j];
+    g_dev_link2[i] = L'\0';
 }
 
 static NTSTATUS DeviceOffline(PDEVICE_OBJECT DeviceObject, PIRP Irp)
@@ -130,10 +139,12 @@ static VOID ProcessNotifyRoutine(HANDLE ParentId, HANDLE ProcessId, BOOLEAN Crea
 
 VOID DriverSelfUnload(VOID)
 {
-    UNICODE_STRING lnk;
+    UNICODE_STRING lnk, lnk2;
     PsSetCreateProcessNotifyRoutine(ProcessNotifyRoutine, TRUE);
-    RtlInitUnicodeString(&lnk, g_dev_link);
+    RtlInitUnicodeString(&lnk,  g_dev_link);
+    RtlInitUnicodeString(&lnk2, g_dev_link2);
     IoDeleteSymbolicLink(&lnk);
+    IoDeleteSymbolicLink(&lnk2);
     if (g_target) { ObDereferenceObject(g_target); g_target = NULL; }
     if (g_device && g_device->DriverObject)
     {
@@ -158,9 +169,11 @@ static VOID ProcessNotifyRoutine(HANDLE ParentId, HANDLE ProcessId, BOOLEAN Crea
 static VOID Cleanup(VOID)
 {
     PsSetCreateProcessNotifyRoutine(ProcessNotifyRoutine, TRUE);
-    UNICODE_STRING lnk;
-    RtlInitUnicodeString(&lnk, g_dev_link);
+    UNICODE_STRING lnk, lnk2;
+    RtlInitUnicodeString(&lnk,  g_dev_link);
+    RtlInitUnicodeString(&lnk2, g_dev_link2);
     IoDeleteSymbolicLink(&lnk);
+    IoDeleteSymbolicLink(&lnk2);
     if (g_target) { ObDereferenceObject(g_target); g_target = NULL; }
     if (g_device) { IoDeleteDevice(g_device);       g_device = NULL; }
 }
@@ -202,6 +215,29 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
 
     build_names();
 
+    UNICODE_STRING device_name;
+    UNICODE_STRING device_link;
+    UNICODE_STRING device_link2;
+    RtlInitUnicodeString(&device_name,  g_dev_name);
+    RtlInitUnicodeString(&device_link,  g_dev_link);
+    RtlInitUnicodeString(&device_link2, g_dev_link2);
+
+    // A previous (now dormant) mapping may still own the device object and
+    // symlinks under our fixed name. Remove them so this re-map does not fail
+    // with STATUS_OBJECT_NAME_COLLISION (0xc0000035).
+    {
+        PFILE_OBJECT  fo = NULL;
+        PDEVICE_OBJECT od = NULL;
+        if (NT_SUCCESS(IoGetDeviceObjectPointer(&device_name, 0, &fo, &od)))
+        {
+            if (fo) ObDereferenceObject(fo);
+            IoDeleteDevice(od);
+            ObDereferenceObject(od);
+        }
+    }
+    IoDeleteSymbolicLink(&device_link);
+    IoDeleteSymbolicLink(&device_link2);
+
     {
         ULONG i;
         for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
@@ -213,13 +249,6 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
     DriverObject->MajorFunction[IRP_MJ_CLOSE]          = DefaultDispatch;
     DriverObject->MajorFunction[IRP_MJ_CLEANUP]        = DefaultDispatch;
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DeviceControl;
-
-    UNICODE_STRING device_name;
-    UNICODE_STRING device_link;
-    RtlInitUnicodeString(&device_name, g_dev_name);
-    RtlInitUnicodeString(&device_link, g_dev_link);
-
-    IoDeleteSymbolicLink(&device_link);
 
     NTSTATUS status = IoCreateDevice(
         DriverObject, 0, &device_name,
@@ -262,6 +291,8 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
         g_device = NULL;
         return status;
     }
+
+    IoCreateSymbolicLink(&device_link2, &device_name);
 
     return STATUS_SUCCESS;
 }

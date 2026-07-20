@@ -33,7 +33,7 @@ inline uint32_t cr_get_seed()
 
 inline std::string cr_device_path()
 {
-    char buf[32];
-    sprintf_s(buf, "\\\\.\\%08X", cr_get_seed());
+    char buf[40];
+    sprintf_s(buf, "\\\\.\\Global\\%08X", cr_get_seed());
     return buf;
 }

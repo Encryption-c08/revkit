@@ -125,23 +125,50 @@ static bool try_kdmapper(const std::string&)
 
     std::string cmd = "\"" + mapper + "\" \"" + driver + "\"";
 
+    SECURITY_ATTRIBUTES sa{ sizeof(sa), nullptr, TRUE };
+    HANDLE hRead = INVALID_HANDLE_VALUE, hWrite = INVALID_HANDLE_VALUE;
+    if (!CreatePipe(&hRead, &hWrite, &sa, 0))
+    {
+        push_log("err", "failed to create pipe for kdmapper output");
+        return false;
+    }
+
     STARTUPINFOA si{};
     si.cb = sizeof(si);
+    si.hStdOutput = hWrite;
+    si.hStdError  = hWrite;
+    si.dwFlags   |= STARTF_USESTDHANDLES;
 
     PROCESS_INFORMATION pi{};
     if (!CreateProcessA(nullptr, const_cast<char*>(cmd.c_str()),
-                        nullptr, nullptr, FALSE,
+                        nullptr, nullptr, TRUE,
                         CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi))
     {
         push_log("err", "failed to launch kdmapper.exe -- run as administrator");
+        CloseHandle(hRead); CloseHandle(hWrite);
         return false;
     }
+
+    CloseHandle(hWrite);
+
+    CHAR buf[1024];
+    DWORD rd = 0;
+    std::string out;
+    while (ReadFile(hRead, buf, sizeof(buf) - 1, &rd, nullptr) && rd > 0)
+    {
+        buf[rd] = '\0';
+        out += buf;
+    }
+    CloseHandle(hRead);
 
     WaitForSingleObject(pi.hProcess, 15000);
     DWORD exit_code = 1;
     GetExitCodeProcess(pi.hProcess, &exit_code);
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
+
+    if (!out.empty())
+        push_log("info", "kdmapper output:\n" + out);
 
     if (exit_code != 0)
     {
@@ -282,7 +309,7 @@ static void handle_cmd(const std::string& line)
 
     if (cmd == "/help")
     {
-        push_log("info", "commands: /load /unload /status /verbose");
+        push_log("info", "commands: /load /unload /reload /status /verbose");
     }
     else if (cmd == "/verbose")
     {
@@ -332,6 +359,27 @@ static void handle_cmd(const std::string& line)
         else
         {
             push_log("err", "unload failed");
+        }
+        push_status();
+    }
+    else if (cmd == "/reload")
+    {
+        push_log("info", "reloading kernel driver...");
+        if (driver_is_loaded())
+        {
+            driver_unload();
+            Sleep(300);
+        }
+        if (try_kdmapper(""))
+        {
+            revkit::core::Memory::get().try_use_driver();
+            g_driver_ok.store(true);
+            push_log("ok", "kernel driver loaded");
+        }
+        else
+        {
+            g_driver_ok.store(false);
+            push_log("err", "failed -- run as admin");
         }
         push_status();
     }
